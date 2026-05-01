@@ -6,26 +6,7 @@
 <title>ME Global Resources — CV Formatter</title>
 <link href="https://fonts.googleapis.com/css2?family=Crimson+Pro:wght@400;600;700&family=Jost:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.6.0/mammoth.browser.min.js">
-// ── PASSWORD GATE ──
-// Change 'mactech2025' below to whatever password you want your team to use
-const TEAM_PASSWORD = 'mactech';
 
-function checkPassword() {
-  const val = document.getElementById('pw-input').value;
-  if (val === TEAM_PASSWORD) {
-    document.getElementById('pw-gate').style.display = 'none';
-    sessionStorage.setItem('cv_auth', '1');
-  } else {
-    document.getElementById('pw-error').textContent = 'Incorrect password — please try again.';
-    document.getElementById('pw-input').value = '';
-    document.getElementById('pw-input').focus();
-  }
-}
-
-// Auto-dismiss if already authenticated in this session
-if (sessionStorage.getItem('cv_auth') === '1') {
-  document.getElementById('pw-gate').style.display = 'none';
-}
 
 </script>
 <style>
@@ -465,7 +446,7 @@ textarea::placeholder { color: rgba(255,255,255,0.2); }
     <div class="pw-logo">ME<br>Global<br>Resources</div>
     <div class="pw-title">CV Formatter</div>
     <div class="pw-sub">Enter your team password to continue</div>
-    <input type="password" class="pw-input" id="pw-input" placeholder="Password" onkeydown="if(event.key==='Enter')checkPassword()">
+    <input type="password" class="pw-input" id="pw-input" placeholder="Password" >
     <button class="pw-btn" onclick="checkPassword()">Enter</button>
     <div class="pw-error" id="pw-error"></div>
   </div>
@@ -600,6 +581,43 @@ textarea::placeholder { color: rgba(255,255,255,0.2); }
 </div>
 
 <script>
+// ── PASSWORD GATE ──
+const TEAM_PASSWORD = 'Mactech2026';
+
+function checkPassword() {
+  const input = document.getElementById('pw-input');
+  const error = document.getElementById('pw-error');
+  const gate = document.getElementById('pw-gate');
+  if (!input || !gate) return;
+  const val = input.value.trim();
+  if (val === TEAM_PASSWORD) {
+    gate.style.display = 'none';
+    try { sessionStorage.setItem('cv_auth', '1'); } catch(e) {}
+  } else {
+    error.textContent = 'Incorrect password — please try again.';
+    input.value = '';
+    input.focus();
+  }
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+  const gate = document.getElementById('pw-gate');
+  const input = document.getElementById('pw-input');
+  if (!gate) return;
+  try {
+    if (sessionStorage.getItem('cv_auth') === '1') {
+      gate.style.display = 'none';
+      return;
+    }
+  } catch(e) {}
+  if (input) {
+    input.focus();
+    input.addEventListener('keydown', function(e) {
+      if (e.key === 'Enter') checkPassword();
+    });
+  }
+});
+
 // ── STATE ──
 let activeTab = 'paste';
 let activeHlTab = 'title';
@@ -627,7 +645,7 @@ dz.addEventListener('dragover', e => { e.preventDefault(); dz.classList.add('ove
 dz.addEventListener('dragleave', () => dz.classList.remove('over'));
 dz.addEventListener('drop', e => { e.preventDefault(); dz.classList.remove('over'); if(e.dataTransfer.files[0]) handleFile(e.dataTransfer.files[0]); });
 
- function handleFile(f) {
+async function handleFile(f) {
   const note = document.getElementById('file-note');
   note.textContent = '⏳ Reading ' + f.name + '...';
   uploadedText = '';
@@ -994,11 +1012,7 @@ ${scrubbed}
   try {
     const res = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
-      headers: {
-  'Content-Type': 'application/json',
-  'x-api-key': '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',
-  'anthropic-version': '2023-06-01'
-},
+      headers: {'Content-Type': 'application/json', 'x-api-key': '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', 'anthropic-version': '2023-06-01'},
       body: JSON.stringify({
         model: 'claude-sonnet-4-20250514',
         max_tokens: 3000,
@@ -1147,11 +1161,7 @@ ${cvSummary}`;
   try {
     const res = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
-      headers: {
-  'Content-Type': 'application/json',
-  'x-api-key': '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',
-  'anthropic-version': '2023-06-01'
-},
+      headers: {'Content-Type': 'application/json', 'x-api-key': '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', 'anthropic-version': '2023-06-01'},
       body: JSON.stringify({
         model: 'claude-sonnet-4-20250514',
         max_tokens: 600,
