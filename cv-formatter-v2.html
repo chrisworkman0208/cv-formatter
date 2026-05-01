@@ -1,0 +1,1020 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ME Global Resources — CV Formatter</title>
+<link href="https://fonts.googleapis.com/css2?family=Crimson+Pro:wght@400;600;700&family=Jost:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.6.0/mammoth.browser.min.js"></script>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --dark: #0e1720;
+  --dark2: #162030;
+  --green: #2a7a2a;
+  --green-light: #3a9a3a;
+  --gold: #c49a2a;
+  --border-dark: rgba(255,255,255,0.07);
+  --text-dim: rgba(255,255,255,0.45);
+  --text-mid: rgba(255,255,255,0.7);
+  --text-bright: rgba(255,255,255,0.92);
+  --ink: #1a1a2a;
+  --ink-mid: #374151;
+  --rule: #d0cac0;
+  --stone: #f5f2ec;
+}
+
+body { font-family: 'Jost', sans-serif; background: var(--dark); color: var(--text-bright); min-height: 100vh; }
+
+/* ─── HEADER ─── */
+.app-bar {
+  background: var(--dark);
+  border-bottom: 1px solid var(--border-dark);
+  height: 58px;
+  display: flex;
+  align-items: center;
+  padding: 0 32px;
+  gap: 16px;
+  position: sticky;
+  top: 0;
+  z-index: 100;
+}
+
+.megr-logo-text {
+  font-family: 'Jost', sans-serif;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--green-light);
+  letter-spacing: 1.5px;
+  line-height: 1.25;
+  text-transform: uppercase;
+}
+
+.app-bar-divider { width: 1px; height: 28px; background: var(--border-dark); }
+
+.app-bar-title {
+  font-family: 'Crimson Pro', serif;
+  font-size: 20px;
+  font-weight: 600;
+  color: var(--text-bright);
+  letter-spacing: 0.3px;
+}
+
+.app-bar-right { margin-left: auto; font-size: 11px; color: var(--text-dim); letter-spacing: 1.5px; text-transform: uppercase; }
+
+/* ─── LAYOUT ─── */
+.workspace { display: grid; grid-template-columns: 360px 1fr; min-height: calc(100vh - 58px); }
+
+/* ─── SIDEBAR ─── */
+.sidebar {
+  background: var(--dark2);
+  border-right: 1px solid var(--border-dark);
+  padding: 24px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  overflow-y: auto;
+  position: sticky;
+  top: 58px;
+  max-height: calc(100vh - 58px);
+}
+
+.sec-label {
+  font-size: 9.5px;
+  font-weight: 700;
+  letter-spacing: 3px;
+  text-transform: uppercase;
+  color: var(--gold);
+  margin-bottom: 10px;
+}
+
+/* tabs */
+.tabs { display: flex; border: 1px solid var(--border-dark); border-radius: 7px; overflow: hidden; }
+.tab { flex: 1; padding: 9px 0; font-family: 'Jost', sans-serif; font-size: 12.5px; font-weight: 500; border: none; cursor: pointer; background: transparent; color: var(--text-dim); transition: all 0.18s; }
+.tab.on { background: var(--green); color: #fff; }
+
+.tab-panel { display: none; margin-top: 10px; }
+.tab-panel.on { display: block; }
+
+textarea {
+  width: 100%;
+  height: 200px;
+  background: rgba(255,255,255,0.03);
+  border: 1px solid var(--border-dark);
+  border-radius: 7px;
+  padding: 12px;
+  font-family: 'Jost', sans-serif;
+  font-size: 12px;
+  color: var(--text-mid);
+  resize: vertical;
+  outline: none;
+  line-height: 1.6;
+  transition: border-color 0.18s;
+}
+textarea:focus { border-color: rgba(42,122,42,0.5); }
+textarea::placeholder { color: rgba(255,255,255,0.2); }
+
+/* drop zone */
+.dropzone {
+  border: 2px dashed rgba(42,122,42,0.3);
+  border-radius: 8px;
+  padding: 28px 16px;
+  text-align: center;
+  cursor: pointer;
+  position: relative;
+  transition: all 0.18s;
+  background: rgba(42,122,42,0.03);
+  margin-top: 10px;
+}
+.dropzone:hover, .dropzone.over { border-color: var(--green); background: rgba(42,122,42,0.07); }
+.dropzone input { position: absolute; inset: 0; opacity: 0; cursor: pointer; width: 100%; height: 100%; }
+.drop-icon { font-size: 28px; display: block; margin-bottom: 8px; }
+.drop-title { font-size: 13px; font-weight: 600; color: var(--text-mid); }
+.drop-sub { font-size: 11px; color: var(--text-dim); margin-top: 3px; }
+.file-note { font-size: 11.5px; color: var(--green-light); margin-top: 8px; min-height: 16px; }
+
+/* anon toggles */
+.anon-list { display: flex; flex-direction: column; gap: 6px; }
+.anon-row {
+  display: flex; align-items: center; gap: 9px;
+  padding: 8px 11px;
+  border: 1px solid var(--border-dark);
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.15s;
+  background: rgba(255,255,255,0.02);
+  user-select: none;
+}
+.anon-row:hover { border-color: rgba(42,122,42,0.35); }
+.anon-row.on { border-color: rgba(42,122,42,0.45); background: rgba(42,122,42,0.07); }
+.anon-box { width: 16px; height: 16px; border: 1.5px solid rgba(255,255,255,0.2); border-radius: 3px; display: grid; place-items: center; flex-shrink: 0; font-size: 10px; color: transparent; transition: all 0.15s; }
+.anon-row.on .anon-box { background: var(--green); border-color: var(--green); color: white; }
+.anon-text { font-size: 12.5px; color: var(--text-dim); }
+.anon-row.on .anon-text { color: var(--text-mid); }
+
+/* field */
+.field { display: flex; flex-direction: column; gap: 5px; }
+.field-lbl { font-size: 11px; color: var(--text-dim); letter-spacing: 0.3px; }
+.field-inp {
+  background: rgba(255,255,255,0.03);
+  border: 1px solid var(--border-dark);
+  border-radius: 6px;
+  padding: 9px 11px;
+  font-family: 'Jost', sans-serif;
+  font-size: 12.5px;
+  color: var(--text-bright);
+  outline: none;
+  transition: border-color 0.18s;
+  width: 100%;
+}
+.field-inp:focus { border-color: rgba(42,122,42,0.5); }
+.field-inp::placeholder { color: rgba(255,255,255,0.18); }
+
+/* branding box */
+.brand-box {
+  background: rgba(255,255,255,0.03);
+  border: 1px solid var(--border-dark);
+  border-radius: 7px;
+  padding: 12px 14px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.brand-logo-text {
+  font-size: 11px; font-weight: 800; color: var(--green-light);
+  letter-spacing: 1px; line-height: 1.3; text-transform: uppercase;
+}
+.brand-note { font-size: 11px; color: var(--text-dim); line-height: 1.4; }
+
+/* main format button */
+.btn-main {
+  width: 100%;
+  height: 48px;
+  background: var(--green);
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-family: 'Crimson Pro', serif;
+  font-size: 17px;
+  font-weight: 600;
+  letter-spacing: 0.4px;
+  cursor: pointer;
+  transition: all 0.18s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.btn-main:hover { background: var(--green-light); transform: translateY(-1px); }
+.btn-main:disabled { opacity: 0.45; cursor: not-allowed; transform: none; }
+
+.msg { font-size: 12px; font-weight: 500; padding: 9px 11px; border-radius: 6px; display: none; margin-top: 8px; }
+.msg.err { background: rgba(180,40,40,0.15); color: #fca5a5; border: 1px solid rgba(180,40,40,0.25); display: block; }
+.msg.ok { background: rgba(30,100,50,0.2); color: #86efac; border: 1px solid rgba(30,100,50,0.25); display: block; }
+
+.divider { height: 1px; background: var(--border-dark); }
+
+/* highlights section */
+.hl-tabs { display: flex; border: 1px solid var(--border-dark); border-radius: 7px; overflow: hidden; margin-bottom: 10px; }
+.hl-tab { flex: 1; padding: 8px 0; font-family: 'Jost', sans-serif; font-size: 12px; font-weight: 500; border: none; cursor: pointer; background: transparent; color: var(--text-dim); transition: all 0.18s; }
+.hl-tab.on { background: rgba(196,154,42,0.5); color: #fff; }
+.hl-panel { display: none; }
+.hl-panel.on { display: block; }
+.hl-note { font-size: 11px; color: var(--text-dim); line-height: 1.55; margin-bottom: 10px; }
+
+.btn-hl {
+  width: 100%;
+  height: 42px;
+  background: transparent;
+  color: var(--gold);
+  border: 1.5px solid rgba(196,154,42,0.4);
+  border-radius: 7px;
+  font-family: 'Jost', sans-serif;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  margin-top: 10px;
+  transition: all 0.18s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+}
+.btn-hl:hover { background: rgba(196,154,42,0.1); border-color: var(--gold); }
+.btn-hl:disabled { opacity: 0.4; cursor: not-allowed; }
+
+.hl-spinner { display: none; width: 14px; height: 14px; border: 2px solid rgba(196,154,42,0.3); border-top-color: var(--gold); border-radius: 50%; animation: spin 0.7s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* ─── PREVIEW ─── */
+.preview { background: #ddd8cf; padding: 40px; overflow-y: auto; }
+
+.preview-empty {
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  min-height: 400px; gap: 14px; color: rgba(0,0,0,0.25); text-align: center;
+}
+.preview-empty-icon { font-size: 52px; opacity: 0.5; }
+.preview-empty-title { font-family: 'Crimson Pro', serif; font-size: 24px; font-weight: 600; }
+.preview-empty-sub { font-size: 13px; }
+
+.doc-actions { display: none; gap: 10px; max-width: 760px; margin: 0 auto 18px; }
+.btn-act {
+  padding: 8px 18px; border-radius: 6px;
+  font-family: 'Jost', sans-serif; font-size: 12.5px; font-weight: 600;
+  cursor: pointer; border: none; transition: all 0.15s;
+}
+.btn-print { background: var(--dark); color: var(--gold); border: 1px solid rgba(196,154,42,0.35); }
+.btn-print:hover { background: var(--green); color: white; border-color: var(--green); }
+.btn-copy { background: white; color: var(--ink); border: 1px solid #ccc; }
+.btn-copy:hover { background: var(--stone); }
+
+/* ─── CV DOCUMENT ─── */
+#cv-doc {
+  background: white;
+  max-width: 760px;
+  margin: 0 auto;
+  box-shadow: 0 4px 32px rgba(0,0,0,0.18);
+  display: none;
+}
+
+/* Header: logo left | divider | name right */
+.cv-hd {
+  display: flex;
+  align-items: stretch;
+  border-bottom: 1.5px solid #444;
+  padding: 24px 40px 0;
+  gap: 0;
+}
+
+.cv-hd-logo {
+  padding-right: 28px;
+  padding-bottom: 20px;
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+}
+
+.cv-hd-logo-text {
+  font-family: 'Jost', sans-serif;
+  font-size: 11.5px;
+  font-weight: 800;
+  color: var(--green);
+  letter-spacing: 1px;
+  line-height: 1.3;
+  text-transform: uppercase;
+}
+
+.cv-hd-rule {
+  width: 1px;
+  background: #bbb;
+  align-self: stretch;
+  margin-bottom: 0;
+  flex-shrink: 0;
+}
+
+.cv-hd-name-block {
+  flex: 1;
+  padding-left: 36px;
+  padding-bottom: 20px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+.cv-cand-name {
+  font-family: 'Jost', sans-serif;
+  font-size: 13.5px;
+  font-weight: 400;
+  letter-spacing: 4px;
+  text-transform: uppercase;
+  color: var(--ink);
+}
+
+.cv-cand-title {
+  font-size: 11px;
+  color: #6b7280;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  margin-top: 4px;
+  font-weight: 500;
+}
+
+/* Highlights callout */
+.cv-highlights {
+  background: var(--dark);
+  margin: 0 40px 0;
+  border-radius: 0 0 6px 6px;
+  overflow: hidden;
+  display: none;
+}
+.cv-hl-head {
+  padding: 11px 18px;
+  border-bottom: 1px solid rgba(196,154,42,0.2);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.cv-hl-badge {
+  font-size: 9px; font-weight: 700; letter-spacing: 2.5px;
+  text-transform: uppercase; color: var(--gold); white-space: nowrap;
+}
+.cv-hl-role { font-size: 11px; color: rgba(255,255,255,0.4); font-style: italic; }
+.cv-hl-body { padding: 12px 18px 16px; }
+.cv-hl-body ul { list-style: none; display: flex; flex-direction: column; gap: 7px; }
+.cv-hl-body li { display: flex; align-items: baseline; gap: 9px; font-size: 12.5px; line-height: 1.6; color: rgba(255,255,255,0.82); }
+.hl-dot { color: var(--gold); flex-shrink: 0; }
+
+/* CV body */
+.cv-body { padding: 28px 40px 36px; }
+.cv-section { margin-bottom: 24px; }
+
+.cv-sec-hd {
+  display: flex; align-items: center; gap: 10px; margin-bottom: 12px;
+}
+.cv-sec-title {
+  font-family: 'Jost', sans-serif;
+  font-size: 9.5px; font-weight: 700;
+  letter-spacing: 3px; text-transform: uppercase;
+  color: var(--ink); white-space: nowrap;
+}
+.cv-sec-line { flex: 1; height: 1px; background: var(--rule); }
+
+.cv-profile { font-size: 13px; line-height: 1.8; color: var(--ink-mid); }
+
+.cv-skills { display: flex; flex-wrap: wrap; gap: 6px; }
+.cv-skill {
+  font-size: 11.5px; font-weight: 500;
+  padding: 4px 12px;
+  background: var(--stone);
+  border: 1px solid var(--rule);
+  border-radius: 20px;
+  color: var(--ink);
+}
+
+.cv-role { margin-bottom: 18px; }
+.cv-role-top { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 2px; }
+.cv-role-title { font-size: 13.5px; font-weight: 700; color: var(--ink); }
+.cv-role-dates { font-size: 11.5px; color: #6b7280; font-weight: 500; margin-left: 12px; white-space: nowrap; }
+.cv-role-org { font-size: 12.5px; font-weight: 600; color: var(--green); margin-bottom: 7px; }
+.cv-role-context { font-size: 12.5px; font-style: italic; color: var(--ink-mid); margin-bottom: 7px; line-height: 1.6; }
+.cv-role-bullets { padding-left: 15px; }
+.cv-role-bullets li { font-size: 12.5px; line-height: 1.7; color: var(--ink-mid); margin-bottom: 2px; }
+
+.cv-qual-row {
+  display: flex; justify-content: space-between; align-items: baseline;
+  padding: 6px 0; border-bottom: 1px dashed var(--rule);
+  font-size: 13px;
+}
+.cv-qual-row:last-child { border-bottom: none; }
+.cv-qual-name { font-weight: 600; color: var(--ink); }
+.cv-qual-year { color: #6b7280; font-size: 12px; margin-left: 10px; flex-shrink: 0; }
+
+.cv-footer {
+  background: var(--stone);
+  border-top: 1px solid var(--rule);
+  padding: 12px 40px;
+  display: flex;
+  justify-content: space-between;
+  font-size: 10px;
+  color: #9ca3af;
+}
+
+/* print */
+@media print {
+  body, .preview { background: white; }
+  .app-bar, .sidebar, .preview-empty, .doc-actions { display: none !important; }
+  .workspace { display: block; }
+  .preview { padding: 0; }
+  #cv-doc { display: block !important; box-shadow: none; max-width: 100%; }
+}
+
+@media (max-width: 800px) {
+  .workspace { grid-template-columns: 1fr; }
+  .sidebar { position: static; max-height: none; }
+  .preview { padding: 20px 12px; }
+}
+</style>
+</head>
+<body>
+
+<header class="app-bar">
+  <img src="data:image/jpeg;base64,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" alt="ME Global Resources" style="height:34px;width:auto;object-fit:contain;">
+  <div class="app-bar-divider"></div>
+  <div class="app-bar-title">CV Formatter</div>
+  <div class="app-bar-right">Nuclear &amp; Infrastructure</div>
+</header>
+
+<div class="workspace">
+
+  <!-- SIDEBAR -->
+  <aside class="sidebar">
+
+    <!-- 1. INPUT -->
+    <div>
+      <div class="sec-label">1 — Input CV</div>
+      <div class="tabs">
+        <button class="tab on" onclick="switchTab('paste')">Paste Text</button>
+        <button class="tab" onclick="switchTab('upload')">Upload File</button>
+      </div>
+
+      <div class="tab-panel on" id="tab-paste">
+        <textarea id="cv-text" placeholder="Paste the full CV text here — all content including contact details. The formatter will clean and anonymise automatically."></textarea>
+      </div>
+
+      <div class="tab-panel" id="tab-upload">
+        <div class="dropzone" id="dropzone">
+          <input type="file" id="file-inp" accept=".docx,.txt" onchange="handleFile(this.files[0])">
+          <span class="drop-icon">📄</span>
+          <div class="drop-title">Drop .docx or .txt here</div>
+          <div class="drop-sub">or click to browse</div>
+        </div>
+        <div class="file-note" id="file-note"></div>
+      </div>
+    </div>
+
+    <!-- 2. ANONYMISE -->
+    <div>
+      <div class="sec-label">2 — Anonymise</div>
+      <div class="anon-list">
+        <div class="anon-row on" onclick="this.classList.toggle('on')">
+          <div class="anon-box">✓</div><span class="anon-text">Phone number</span>
+        </div>
+        <div class="anon-row on" onclick="this.classList.toggle('on')">
+          <div class="anon-box">✓</div><span class="anon-text">Email address</span>
+        </div>
+        <div class="anon-row on" onclick="this.classList.toggle('on')">
+          <div class="anon-box">✓</div><span class="anon-text">Home address</span>
+        </div>
+        <div class="anon-row on" onclick="this.classList.toggle('on')">
+          <div class="anon-box">✓</div><span class="anon-text">LinkedIn &amp; social URLs</span>
+        </div>
+        <div class="anon-row on" onclick="this.classList.toggle('on')">
+          <div class="anon-box">✓</div><span class="anon-text">References</span>
+        </div>
+        <div class="anon-row on" onclick="this.classList.toggle('on')">
+          <div class="anon-box">✓</div><span class="anon-text">Date of birth</span>
+        </div>
+        <div class="anon-row on" onclick="this.classList.toggle('on')">
+          <div class="anon-box">✓</div><span class="anon-text">Personal details</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- 3. BRANDING -->
+    <div>
+      <div class="sec-label">3 — Branding</div>
+      <div class="brand-box">
+        <img src="data:image/jpeg;base64,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" alt="ME Global Resources" style="height:34px;width:auto;object-fit:contain;">
+        <div class="brand-note">Applied automatically to every formatted CV.</div>
+      </div>
+    </div>
+
+    <!-- FORMAT BUTTON -->
+    <div>
+      <button class="btn-main" id="fmt-btn" onclick="formatCV()">Format &amp; Anonymise CV</button>
+      <div class="msg" id="fmt-msg"></div>
+    </div>
+
+    <div class="divider"></div>
+
+    <!-- 4. ROLE HIGHLIGHTS -->
+    <div>
+      <div class="sec-label">4 — Role Highlights (optional)</div>
+      <div class="hl-note">Format a CV first, then generate tailored highlights for a specific role using AI.</div>
+
+      <div class="hl-tabs">
+        <button class="hl-tab on" onclick="switchHlTab('title')">Job Title</button>
+        <button class="hl-tab" onclick="switchHlTab('spec')">Job Spec</button>
+      </div>
+
+      <div class="hl-panel on" id="hl-title">
+        <input type="text" class="field-inp" id="hl-job-title" placeholder="e.g. Senior Planning Manager — HPC">
+      </div>
+      <div class="hl-panel" id="hl-spec">
+        <textarea id="hl-job-spec" style="height:120px;" placeholder="Paste the full job description here..."></textarea>
+      </div>
+
+      <button class="btn-hl" id="hl-btn" onclick="generateHighlights()">
+        <span id="hl-lbl">✦ Generate Highlights</span>
+        <div class="hl-spinner" id="hl-spin"></div>
+      </button>
+      <div class="msg" id="hl-msg"></div>
+    </div>
+
+  </aside>
+
+  <!-- PREVIEW -->
+  <main class="preview">
+
+    <div class="preview-empty" id="empty-state">
+      <div class="preview-empty-icon">📋</div>
+      <div class="preview-empty-title">Formatted CV will appear here</div>
+      <div class="preview-empty-sub">Paste or upload a CV then click Format &amp; Anonymise</div>
+    </div>
+
+    <div class="doc-actions" id="doc-actions">
+      <button class="btn-act btn-print" onclick="window.print()">🖨 Print / Save PDF</button>
+      <button class="btn-act btn-copy" onclick="copyText()">Copy Text</button>
+    </div>
+
+    <div id="cv-doc"></div>
+
+  </main>
+
+</div>
+
+<script>
+// ── STATE ──
+let activeTab = 'paste';
+let activeHlTab = 'title';
+let uploadedText = '';
+let parsedCV = null;
+
+// ── TAB SWITCHING ──
+function switchTab(t) {
+  activeTab = t;
+  document.querySelectorAll('.tab').forEach((b,i) => b.classList.toggle('on', (i===0&&t==='paste')||(i===1&&t==='upload')));
+  document.getElementById('tab-paste').classList.toggle('on', t==='paste');
+  document.getElementById('tab-upload').classList.toggle('on', t==='upload');
+}
+
+function switchHlTab(t) {
+  activeHlTab = t;
+  document.querySelectorAll('.hl-tab').forEach((b,i) => b.classList.toggle('on', (i===0&&t==='title')||(i===1&&t==='spec')));
+  document.getElementById('hl-title').classList.toggle('on', t==='title');
+  document.getElementById('hl-spec').classList.toggle('on', t==='spec');
+}
+
+// ── FILE UPLOAD ──
+const dz = document.getElementById('dropzone');
+dz.addEventListener('dragover', e => { e.preventDefault(); dz.classList.add('over'); });
+dz.addEventListener('dragleave', () => dz.classList.remove('over'));
+dz.addEventListener('drop', e => { e.preventDefault(); dz.classList.remove('over'); if(e.dataTransfer.files[0]) handleFile(e.dataTransfer.files[0]); });
+
+async function handleFile(f) {
+  const note = document.getElementById('file-note');
+  note.textContent = '⏳ Reading ' + f.name + '...';
+  uploadedText = '';
+  try {
+    if (f.name.endsWith('.docx')) {
+      const buf = await f.arrayBuffer();
+      uploadedText = (await mammoth.extractRawText({arrayBuffer: buf})).value;
+    } else {
+      uploadedText = await f.text();
+    }
+    note.textContent = '✓ ' + f.name + ' ready';
+  } catch(e) {
+    note.textContent = '✗ Could not read file: ' + e.message;
+  }
+}
+
+// ── CV PARSER ──
+function parseCV(raw) {
+  // Normalise line endings, collapse 3+ blank lines to 2
+  const cleaned = raw.replace(/\r\n/g,'\n').replace(/\n{3,}/g,'\n\n');
+  const lines = cleaned.split('\n').map(l => l.trim());
+  const nonEmpty = lines.filter(Boolean);
+
+  const anonOn = [...document.querySelectorAll('.anon-row.on .anon-text')].map(el => el.textContent.toLowerCase());
+  const shouldStrip = kw => anonOn.some(a => a.includes(kw));
+
+  // ── Pre-scrub: remove contact detail lines anywhere in the document ──
+  // PDF columns dump phone/email/address mid-text — strip them upfront
+  function scrubLines(lineArr) {
+    return lineArr.filter(l => {
+      const t = l.trim();
+      if (!t) return true;
+      // Phone numbers
+      if (shouldStrip('phone') && /^(mobile|phone|tel|m:|t:)?\s*[\+\d][\d\s\-\(\)]{6,}$/.test(t)) return false;
+      // Email addresses
+      if (shouldStrip('email') && /\b[\w._%+\-]+@[\w.\-]+\.[a-z]{2,}\b/i.test(t)) return false;
+      // Standalone short numeric strings (phone fragments)
+      if (shouldStrip('phone') && /^[\d\s\-\+\(\)]{7,}$/.test(t)) return false;
+      // Address labels and postcode lines
+      if (shouldStrip('address') && /^(home address|address|postcode|mobile:|email:)$/i.test(t)) return false;
+      if (shouldStrip('address') && /^[A-Z]{1,2}\d[\d\w]?\s*\d[A-Z]{2}$/i.test(t)) return false; // postcode
+      // Reference blocks
+      if (shouldStrip('references') && /^(references?|refs?)$/i.test(t)) return false;
+      if (shouldStrip('references') && /(phone|email):\s*[\d@]/i.test(t)) return false;
+      return true;
+    });
+  }
+
+  // Apply scrub to nonEmpty before any section parsing
+  const scrubbed = scrubLines(nonEmpty);
+  // Replace nonEmpty with scrubbed version for all subsequent parsing
+  nonEmpty.length = 0;
+  scrubbed.forEach(l => nonEmpty.push(l));
+
+  // ── Helpers ──
+  function toTitleCase(s) { return s.toLowerCase().replace(/\b\w/g, c => c.toUpperCase()); }
+
+  function sectionContent(headingPatterns, stopPatterns) {
+    // Find the LAST occurrence of heading (handles mid-doc name pages)
+    let startIdx = -1;
+    for (let i = 0; i < nonEmpty.length; i++) {
+      if (headingPatterns.some(p => nonEmpty[i].replace(/[^a-z0-9 ]/gi,'').trim().toLowerCase() === p.toLowerCase())) {
+        startIdx = i;
+      }
+    }
+    if (startIdx === -1) {
+      // fallback: partial match
+      for (let i = 0; i < nonEmpty.length; i++) {
+        if (headingPatterns.some(p => nonEmpty[i].toLowerCase().includes(p.toLowerCase()))) {
+          startIdx = i; break;
+        }
+      }
+    }
+    if (startIdx === -1) return [];
+    const result = [];
+    for (let i = startIdx + 1; i < nonEmpty.length; i++) {
+      const l = nonEmpty[i];
+      if (stopPatterns && stopPatterns.some(p => l.replace(/[^a-z0-9 ]/gi,'').trim().toLowerCase().startsWith(p.toLowerCase()))) break;
+      result.push(l);
+    }
+    return result;
+  }
+
+  // ── Name ──
+  // Look for line immediately after "CURRICULUM VITAE" or "CV" heading, or first all-caps 2-word line
+  let candidateName = '';
+  const cvHeadingIdx = nonEmpty.findIndex(l => /^curriculum vitae$/i.test(l.trim()));
+  if (cvHeadingIdx !== -1 && nonEmpty[cvHeadingIdx + 1]) {
+    const candidate = nonEmpty[cvHeadingIdx + 1];
+    if (/^[A-Z][A-Z\s\-']+$/.test(candidate) && candidate.split(' ').length >= 2) {
+      candidateName = toTitleCase(candidate);
+    }
+  }
+  if (!candidateName) {
+    // Look for an ALL CAPS two-word+ line that isn't a section heading
+    const sectionHeadings = /^(profile|key skills|employment|experience|qualifications|education|references|about me|training|certificates)$/i;
+    for (const l of nonEmpty) {
+      if (/^[A-Z][A-Z\s\-']{3,}$/.test(l) && l.split(' ').length >= 2 && !sectionHeadings.test(l)) {
+        candidateName = toTitleCase(l);
+        break;
+      }
+    }
+  }
+  if (!candidateName) {
+    // Last resort: first line that looks like "Firstname Lastname"
+    for (const l of nonEmpty) {
+      const clean = l.replace(/curriculum vitae/i,'').trim();
+      if (clean.length > 3 && clean.length < 40 && /^[A-Za-z][a-zA-Z\s\-'.]+$/.test(clean) && clean.split(' ').length >= 2) {
+        candidateName = toTitleCase(clean); break;
+      }
+    }
+  }
+
+  // ── Profile ──
+  // Join lines so that wrapped sentences are re-joined correctly
+  const profileLines = sectionContent(['profile','personal statement','summary'], ['key skills','skills','employment','experience','qualifications','education']);
+  // Re-join broken lines: if a line doesn't end with punctuation, join with next
+  let profileParagraphs = [];
+  let buf = '';
+  for (const l of profileLines) {
+    if (!l) { if (buf) { profileParagraphs.push(buf.trim()); buf = ''; } continue; }
+    buf += (buf ? ' ' : '') + l;
+    if (/[.!?]$/.test(l)) { profileParagraphs.push(buf.trim()); buf = ''; }
+  }
+  if (buf) profileParagraphs.push(buf.trim());
+  // Remove personal details paragraph if anonymising
+  if (shouldStrip('personal')) {
+    profileParagraphs = profileParagraphs.filter(p => !/\b(married|spouse|partner|children|daughter|son|family|hobbies|interests|rugby|gym)\b/i.test(p));
+  }
+  // Strip any stray phone/email that crept into paragraphs
+  let profile = profileParagraphs.join('\n\n');
+  if (shouldStrip('phone')) profile = profile.replace(/\b(mobile|phone|tel):?\s*[\d\s\+\-\(\)]{7,}/gi, '').trim();
+  if (shouldStrip('email')) profile = profile.replace(/\b[\w._%+\-]+@[\w.\-]+\.[a-z]{2,}\b/gi, '').trim();
+  if (shouldStrip('address')) profile = profile.replace(/\b\d{1,3}\s+[A-Za-z]+\s+(street|road|lane|avenue|drive|close|way|acre|place)[^\n]*/gi, '').trim();
+
+  // ── Skills ──
+  const skillLines = sectionContent(['key skills','skills'], ['employment','experience','qualifications','education','profile','summary']);
+  const skills = skillLines
+    .map(l => l.replace(/^[•\-*\t]+\s*/,'').trim())
+    .filter(l => l.length > 1 && l.length < 70);
+
+  // ── Employment ──
+  const expLines = sectionContent(
+    ['employment history','work history','career history','experience'],
+    ['qualifications','education','certificates','training','about me','references','interests']
+  );
+  const roles = parseRoles(expLines, shouldStrip);
+
+  // ── Qualifications ──
+  const qualLines = sectionContent(
+    ['qualifications and certificates','qualifications','education','certificates','training'],
+    ['about me','references','personal','interests']
+  );
+  const quals = qualLines
+    .map(l => l.replace(/^[•\-*\t]+\s*/,'').trim())
+    .filter(l => l.length > 3 && l.length < 200 && !/^(about me|references)/i.test(l));
+
+  return { candidateName, profile, skills, roles, quals };
+}
+
+function parseRoles(lines, shouldStrip) {
+  const roles = [];
+  let current = null;
+  const datePattern = /(\d{4}|january|february|march|april|may|june|july|august|september|october|november|december|jan|feb|mar|apr|jun|jul|aug|sep|oct|nov|dec)/i;
+  const reasonPattern = /^\(reason|^successfully exited|^\(note:/i;
+
+  for (let i = 0; i < lines.length; i++) {
+    let l = lines[i];
+    if (!l) continue;
+
+    // Skip reason-for-leaving lines
+    if (shouldStrip('personal') && reasonPattern.test(l)) continue;
+
+    const isBullet = /^[•\-*]/.test(l);
+    const hasDate = datePattern.test(l);
+
+    if (hasDate && !isBullet) {
+      // This might be a role header split across 2 lines — check if next line has the date
+      let fullLine = l;
+      if (!/(\d{4}|to date|present)/i.test(l) && i+1 < lines.length && datePattern.test(lines[i+1])) {
+        fullLine = l + ' ' + lines[i+1];
+        i++;
+      }
+      if (current) roles.push(current);
+      current = { ...parseRoleHeader(fullLine), context: '', bullets: [] };
+    } else if (current) {
+      if (isBullet) {
+        // Bullets may wrap — join continuation lines
+        let bullet = l.replace(/^[•\-*]+\s*/,'').trim();
+        while (i+1 < lines.length && lines[i+1] && !/^[•\-*]/.test(lines[i+1]) && !datePattern.test(lines[i+1])) {
+          i++;
+          bullet += ' ' + lines[i].trim();
+        }
+        if (bullet.length > 5) current.bullets.push(bullet);
+      } else if (l.length > 15) {
+        // Context line (project description etc.)
+        if (!current.context) current.context = l;
+        else if (!current.context.endsWith(l)) current.context += ' ' + l;
+      }
+    }
+  }
+  if (current) roles.push(current);
+  return roles;
+}
+
+function parseRoleHeader(line) {
+  // Strip bold markers
+  line = line.replace(/\*+/g,'').trim();
+
+  // Extract dates — look for "Month YYYY - Month YYYY" or "YYYY - YYYY" or ": Month YYYY"
+  const dateRx = /[:\-–,]?\s*((?:jan(?:uary)?|feb(?:ruary)?|mar(?:ch)?|apr(?:il)?|may|jun(?:e)?|jul(?:y)?|aug(?:ust)?|sep(?:tember)?|oct(?:ober)?|nov(?:ember)?|dec(?:ember)?|\d{4})\s*[\-–]?\s*(?:to date|present|jan(?:uary)?|feb(?:ruary)?|mar(?:ch)?|apr(?:il)?|may|jun(?:e)?|jul(?:y)?|aug(?:ust)?|sep(?:tember)?|oct(?:ober)?|nov(?:ember)?|dec(?:ember)?)?\s*(?:\d{4})?)\s*\.?$/i;
+  const dateMatch = line.match(dateRx);
+  let dates = '';
+  let titlePart = line;
+  if (dateMatch) {
+    dates = dateMatch[1].trim().replace(/\s+/g,' ').replace(/to date/i,'Present');
+    dates = dates.replace(/\b(\w)/g, c => c.toUpperCase());
+    titlePart = line.slice(0, line.lastIndexOf(dateMatch[0])).trim().replace(/[:\-–,]+$/, '').trim();
+  }
+
+  // Split title from org — first comma separates them
+  const commaIdx = titlePart.indexOf(',');
+  let title = commaIdx > -1 ? titlePart.slice(0, commaIdx).trim() : titlePart.trim();
+  let orgRaw = commaIdx > -1 ? titlePart.slice(commaIdx + 1).trim() : '';
+
+  // Clean org: remove location suffixes (UK, Ireland, county names, city names)
+  const org = orgRaw
+    .replace(/,?\s*\b(uk|ireland|somerset|cornwall|sydney|newcastle|bridgewater|taunton|london|manchester|birmingham|edinburgh|cardiff)\b[^,]*/gi, '')
+    .replace(/,\s*$/, '')
+    .trim();
+
+  return { title, org, dates };
+}
+
+function toTitleCase(str) {
+  return str.toLowerCase().replace(/\b\w/g, c => c.toUpperCase());
+}
+
+// ── RENDER CV ──
+function formatCV() {
+  const rawInput = activeTab === 'paste'
+    ? document.getElementById('cv-text').value.trim()
+    : uploadedText.trim();
+
+  if (!rawInput) {
+    showMsg('fmt-msg', activeTab === 'paste' ? 'Please paste a CV first.' : 'Please upload a file first.', 'err');
+    return;
+  }
+
+  parsedCV = parseCV(rawInput);
+  renderCV(parsedCV);
+  showMsg('fmt-msg', 'CV formatted successfully.', 'ok');
+}
+
+function renderCV(cv) {
+  const today = new Date().toLocaleDateString('en-GB', {day:'numeric', month:'long', year:'numeric'});
+
+  const profileHTML = cv.profile
+    ? `<div class="cv-section">
+        <div class="cv-sec-hd"><span class="cv-sec-title">Profile</span><div class="cv-sec-line"></div></div>
+        <div class="cv-profile">${esc(cv.profile)}</div>
+      </div>` : '';
+
+  const skillsHTML = cv.skills.length
+    ? `<div class="cv-section">
+        <div class="cv-sec-hd"><span class="cv-sec-title">Key Skills</span><div class="cv-sec-line"></div></div>
+        <div class="cv-skills">${cv.skills.map(s=>`<span class="cv-skill">${esc(s)}</span>`).join('')}</div>
+      </div>` : '';
+
+  const expHTML = cv.roles.length
+    ? `<div class="cv-section">
+        <div class="cv-sec-hd"><span class="cv-sec-title">Employment History</span><div class="cv-sec-line"></div></div>
+        ${cv.roles.map(r => `
+          <div class="cv-role">
+            <div class="cv-role-top">
+              <span class="cv-role-title">${esc(r.title)}</span>
+              <span class="cv-role-dates">${esc(r.dates)}</span>
+            </div>
+            ${r.org ? `<div class="cv-role-org">${esc(r.org)}</div>` : ''}
+            ${r.context ? `<div class="cv-role-context">${esc(r.context)}</div>` : ''}
+            ${r.bullets.length ? `<ul class="cv-role-bullets">${r.bullets.map(b=>`<li>${esc(b)}</li>`).join('')}</ul>` : ''}
+          </div>`).join('')}
+      </div>` : '';
+
+  const qualHTML = cv.quals.length
+    ? `<div class="cv-section">
+        <div class="cv-sec-hd"><span class="cv-sec-title">Qualifications &amp; Certifications</span><div class="cv-sec-line"></div></div>
+        ${cv.quals.map(q => {
+          const yearMatch = q.match(/\b(19|20)\d{2}\b/);
+          const year = yearMatch ? yearMatch[0] : '';
+          const name = q.replace(year,'').replace(/,\s*$/, '').trim();
+          return `<div class="cv-qual-row"><span class="cv-qual-name">${esc(name)}</span><span class="cv-qual-year">${esc(year)}</span></div>`;
+        }).join('')}
+      </div>` : '';
+
+  document.getElementById('cv-doc').innerHTML = `
+    <div class="cv-hd">
+      <div class="cv-hd-logo">
+        <img src="data:image/jpeg;base64,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" alt="ME Global Resources" style="max-height:50px;max-width:150px;object-fit:contain;display:block;">
+      </div>
+      <div class="cv-hd-rule"></div>
+      <div class="cv-hd-name-block">
+        <div class="cv-cand-name">${esc(cv.candidateName)}</div>
+      </div>
+    </div>
+
+    <div class="cv-highlights" id="cv-hl-block"></div>
+
+    <div class="cv-body">
+      ${profileHTML}
+      ${skillsHTML}
+      ${expHTML}
+      ${qualHTML}
+    </div>
+
+    <div class="cv-footer">
+      <span>Presented by ME Global Resources · ${today}</span>
+      <span>Personal contact details withheld — available on request</span>
+    </div>`;
+
+  document.getElementById('empty-state').style.display = 'none';
+  document.getElementById('cv-doc').style.display = 'block';
+  document.getElementById('doc-actions').style.display = 'flex';
+  document.getElementById('cv-doc').scrollIntoView({behavior:'smooth', block:'start'});
+}
+
+// ── HIGHLIGHTS (AI) ──
+async function generateHighlights() {
+  if (!parsedCV) {
+    showMsg('hl-msg', 'Format a CV first before generating highlights.', 'err');
+    return;
+  }
+
+  const roleCtx = activeHlTab === 'title'
+    ? document.getElementById('hl-job-title').value.trim()
+    : document.getElementById('hl-job-spec').value.trim();
+
+  if (!roleCtx) {
+    showMsg('hl-msg', activeHlTab === 'title' ? 'Enter a job title first.' : 'Paste a job spec first.', 'err');
+    return;
+  }
+
+  document.getElementById('hl-msg').className = 'msg';
+  document.getElementById('hl-lbl').style.display = 'none';
+  document.getElementById('hl-spin').style.display = 'block';
+  document.getElementById('hl-btn').disabled = true;
+
+  const cvSummary = `Name: ${parsedCV.candidateName}
+Skills: ${parsedCV.skills.join(', ')}
+Roles: ${parsedCV.roles.map(r=>`${r.title} at ${r.org} (${r.dates})`).join('; ')}
+Qualifications: ${parsedCV.quals.join('; ')}`;
+
+  const prompt = `You are a nuclear and infrastructure recruitment consultant. Write 4-5 concise bullet points highlighting why this candidate suits the target role. Reference specific, concrete experience from the CV. Third-person, professional tone. Return ONLY a JSON array of strings, no markdown.
+
+Target: ${activeHlTab === 'title' ? 'Job title: ' : 'Job spec: '}${roleCtx}
+
+CV summary:
+${cvSummary}`;
+
+  try {
+    const res = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-20250514',
+        max_tokens: 600,
+        messages: [{role:'user', content: prompt}]
+      })
+    });
+
+    const data = await res.json();
+    if (data.error) throw new Error(data.error.message);
+
+    const raw = data.content.map(c=>c.text||'').join('');
+    let bullets;
+    try {
+      const cleaned = raw.replace(/```json|```/g,'').trim();
+      bullets = JSON.parse(cleaned.slice(cleaned.indexOf('['), cleaned.lastIndexOf(']')+1));
+    } catch { throw new Error('Could not parse highlights — please try again.'); }
+
+    injectHighlights(bullets, roleCtx);
+    showMsg('hl-msg', 'Highlights added to CV.', 'ok');
+
+  } catch(e) {
+    showMsg('hl-msg', 'Error: ' + e.message, 'err');
+  } finally {
+    document.getElementById('hl-lbl').style.display = 'inline';
+    document.getElementById('hl-spin').style.display = 'none';
+    document.getElementById('hl-btn').disabled = false;
+  }
+}
+
+function injectHighlights(bullets, roleCtx) {
+  const block = document.getElementById('cv-hl-block');
+  const label = activeHlTab === 'spec' ? 'Role-Specific Highlights' : `Highlights for: ${roleCtx}`;
+  block.innerHTML = `
+    <div class="cv-hl-head">
+      <span class="cv-hl-badge">✦ Key Highlights</span>
+      <span class="cv-hl-role">${esc(label)}</span>
+    </div>
+    <div class="cv-hl-body">
+      <ul>${bullets.map(b=>`<li><span class="hl-dot">◆</span><span>${esc(b)}</span></li>`).join('')}</ul>
+    </div>`;
+  block.style.display = 'block';
+}
+
+// ── UTILS ──
+function esc(s) {
+  if (!s) return '';
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+function showMsg(id, text, type) {
+  const el = document.getElementById(id);
+  el.textContent = text;
+  el.className = 'msg ' + type;
+}
+
+function copyText() {
+  navigator.clipboard.writeText(document.getElementById('cv-doc').innerText)
+    .then(() => showMsg('fmt-msg', 'Copied to clipboard.', 'ok'))
+    .catch(() => showMsg('fmt-msg', 'Copy failed — please select manually.', 'err'));
+}
+</script>
+</body>
+</html>
