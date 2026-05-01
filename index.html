@@ -960,7 +960,11 @@ ${scrubbed}
   try {
     const res = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
-      headers: {'Content-Type': 'application/json'},
+      headers: {
+  'Content-Type': 'application/json',
+  'x-api-key': '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',
+  'anthropic-version': '2023-06-01'
+},
       body: JSON.stringify({
         model: 'claude-sonnet-4-20250514',
         max_tokens: 3000,
@@ -1109,7 +1113,11 @@ ${cvSummary}`;
   try {
     const res = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
-      headers: {'Content-Type': 'application/json'},
+      headers: {
+  'Content-Type': 'application/json',
+  'x-api-key': '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',
+  'anthropic-version': '2023-06-01'
+},
       body: JSON.stringify({
         model: 'claude-sonnet-4-20250514',
         max_tokens: 600,
