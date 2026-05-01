@@ -447,7 +447,7 @@ textarea::placeholder { color: rgba(255,255,255,0.2); }
     <div class="pw-title">CV Formatter</div>
     <div class="pw-sub">Enter your team password to continue</div>
     <input type="password" class="pw-input" id="pw-input" placeholder="Password" >
-    <button class="pw-btn" onclick="checkPassword()">Enter</button>
+    <button class="pw-btn" id="pw-btn">Enter</button>
     <div class="pw-error" id="pw-error"></div>
   </div>
 </div>
@@ -603,6 +603,7 @@ function checkPassword() {
 document.addEventListener('DOMContentLoaded', function() {
   const gate = document.getElementById('pw-gate');
   const input = document.getElementById('pw-input');
+  const btn = document.getElementById('pw-btn');
   if (!gate) return;
   try {
     if (sessionStorage.getItem('cv_auth') === '1') {
@@ -610,6 +611,7 @@ document.addEventListener('DOMContentLoaded', function() {
       return;
     }
   } catch(e) {}
+  if (btn) btn.addEventListener('click', checkPassword);
   if (input) {
     input.focus();
     input.addEventListener('keydown', function(e) {
