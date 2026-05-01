@@ -512,6 +512,8 @@ textarea::placeholder { color: rgba(255,255,255,0.2); }
     <!-- FORMAT BUTTON -->
     <div>
       <button class="btn-main" id="fmt-btn" onclick="formatCV()">Format &amp; Anonymise CV</button>
+      <div class="prog-wrap" id="prog-wrap"><div class="prog-fill" id="prog-fill"></div></div>
+      <div class="prog-label" id="prog-label"></div>
       <div class="msg" id="fmt-msg"></div>
     </div>
 
@@ -610,186 +612,228 @@ async function handleFile(f) {
 
 // ── CV PARSER ──
 function parseCV(raw) {
-  // Normalise line endings, collapse 3+ blank lines to 2
-  const cleaned = raw.replace(/\r\n/g,'\n').replace(/\n{3,}/g,'\n\n');
-  const lines = cleaned.split('\n').map(l => l.trim());
-  const nonEmpty = lines.filter(Boolean);
-
   const anonOn = [...document.querySelectorAll('.anon-row.on .anon-text')].map(el => el.textContent.toLowerCase());
   const shouldStrip = kw => anonOn.some(a => a.includes(kw));
 
-  // ── Pre-scrub: remove contact detail lines anywhere in the document ──
-  // PDF columns dump phone/email/address mid-text — strip them upfront
-  function scrubLines(lineArr) {
-    return lineArr.filter(l => {
+  function toTitleCase(s) { return s.toLowerCase().replace(/\b\w/g, c => c.toUpperCase()); }
+
+  // ── Normalise ──
+  // Strip markdown table rows (| col | col |)
+  let text = raw.replace(/\r\n/g,'\n');
+  text = text.replace(/^\|.*\|\s*$/gm, line => {
+    // Extract cell text from table rows for skills
+    return line.split('|').map(c => c.replace(/\*+/g,'').trim()).filter(Boolean).join('\n');
+  });
+  // Strip markdown bold/italic
+  text = text.replace(/\*\*([^*]+)\*\*/g, '$1').replace(/\*([^*]+)\*/g, '$1');
+  // Collapse 3+ newlines
+  text = text.replace(/\n{3,}/g,'\n\n');
+
+  const lines = text.split('\n').map(l => l.trim());
+  const nonEmpty = lines.filter(Boolean);
+
+  // ── Pre-scrub contact details (appear anywhere due to PDF/DOCX column layouts) ──
+  function scrub(arr) {
+    return arr.filter(l => {
       const t = l.trim();
       if (!t) return true;
-      // Phone numbers
-      if (shouldStrip('phone') && /^(mobile|phone|tel|m:|t:)?\s*[\+\d][\d\s\-\(\)]{6,}$/.test(t)) return false;
-      // Email addresses
+      if (shouldStrip('phone') && /^(mobile|phone|tel|m:|t:)?\s*[+\d][\d\s\-().]{6,}$/.test(t)) return false;
+      if (shouldStrip('phone') && /^[\d\s\-+().]{7,}$/.test(t)) return false;
       if (shouldStrip('email') && /\b[\w._%+\-]+@[\w.\-]+\.[a-z]{2,}\b/i.test(t)) return false;
-      // Standalone short numeric strings (phone fragments)
-      if (shouldStrip('phone') && /^[\d\s\-\+\(\)]{7,}$/.test(t)) return false;
-      // Address labels and postcode lines
-      if (shouldStrip('address') && /^(home address|address|postcode|mobile:|email:)$/i.test(t)) return false;
-      if (shouldStrip('address') && /^[A-Z]{1,2}\d[\d\w]?\s*\d[A-Z]{2}$/i.test(t)) return false; // postcode
-      // Reference blocks
-      if (shouldStrip('references') && /^(references?|refs?)$/i.test(t)) return false;
+      if (shouldStrip('linkedin') && /linkedin\.com/i.test(t)) return false;
+      if (shouldStrip('linkedin') && /^(linkedin|twitter|github|facebook)[\.:\/]/i.test(t)) return false;
+      if (shouldStrip('address') && /^(home address|address|postcode|mobile:|email:|linkedin:)$/i.test(t)) return false;
+      if (shouldStrip('address') && /^[A-Z]{1,2}\d[\d\w]?\s*\d[A-Z]{2}$/i.test(t)) return false;
+      // Combined contact line e.g. "07xxx • email@x.com • linkedin.com • UK"
+      if ((shouldStrip('phone') || shouldStrip('email')) && /•/.test(t) && /[\d]{5,}/.test(t)) return false;
       if (shouldStrip('references') && /(phone|email):\s*[\d@]/i.test(t)) return false;
       return true;
     });
   }
+  const cleaned = scrub(nonEmpty);
 
-  // Apply scrub to nonEmpty before any section parsing
-  const scrubbed = scrubLines(nonEmpty);
-  // Replace nonEmpty with scrubbed version for all subsequent parsing
-  nonEmpty.length = 0;
-  scrubbed.forEach(l => nonEmpty.push(l));
-
-  // ── Helpers ──
-  function toTitleCase(s) { return s.toLowerCase().replace(/\b\w/g, c => c.toUpperCase()); }
-
-  function sectionContent(headingPatterns, stopPatterns) {
-    // Find the LAST occurrence of heading (handles mid-doc name pages)
-    let startIdx = -1;
-    for (let i = 0; i < nonEmpty.length; i++) {
-      if (headingPatterns.some(p => nonEmpty[i].replace(/[^a-z0-9 ]/gi,'').trim().toLowerCase() === p.toLowerCase())) {
-        startIdx = i;
+  // ── Name ──
+  // Strategy 1: line after "CURRICULUM VITAE"
+  let candidateName = '';
+  const cvIdx = cleaned.findIndex(l => /^curriculum vitae$/i.test(l));
+  if (cvIdx > -1 && cleaned[cvIdx+1]) {
+    const c = cleaned[cvIdx+1];
+    if (/^[A-Z][A-Za-z\s\-']+$/.test(c) && c.split(' ').length >= 2) candidateName = toTitleCase(c);
+  }
+  // Strategy 2: first line of document if it looks like a name
+  if (!candidateName && cleaned[0]) {
+    const first = cleaned[0];
+    if (/^[A-Z][a-zA-Z]+\s+[A-Z][a-zA-Z]+/.test(first) && first.length < 50 && !first.includes(':') && !first.includes('|')) {
+      candidateName = toTitleCase(first.trim());
+    }
+  }
+  // Strategy 3: all-caps two-word line that isn't a section heading
+  if (!candidateName) {
+    const headings = /^(profile|key skills|core competencies|competencies|employment|experience|qualifications|education|references|about me|training|certificates|summary|professional)$/i;
+    for (const l of cleaned) {
+      if (/^[A-Z][A-Z\s\-']{3,}$/.test(l) && l.split(' ').length >= 2 && !headings.test(l)) {
+        candidateName = toTitleCase(l); break;
       }
     }
+  }
+
+  // ── Section extractor ──
+  const SECTION_HEADS = /^(profile|professional summary|summary|key skills|core competencies|competencies|skills|employment history|employment|professional experience|experience|work history|career history|qualifications|education and certifications|education|certifications|training|key projects|about me|references|interests)$/i;
+
+  function getSectionLines(headingPatterns, stopPatterns) {
+    let startIdx = -1;
+    // Find last matching heading
+    for (let i = 0; i < cleaned.length; i++) {
+      const l = cleaned[i].replace(/[^a-zA-Z0-9 ]/g,'').trim();
+      if (headingPatterns.some(p => l.toLowerCase() === p.toLowerCase())) startIdx = i;
+    }
     if (startIdx === -1) {
-      // fallback: partial match
-      for (let i = 0; i < nonEmpty.length; i++) {
-        if (headingPatterns.some(p => nonEmpty[i].toLowerCase().includes(p.toLowerCase()))) {
-          startIdx = i; break;
-        }
+      for (let i = 0; i < cleaned.length; i++) {
+        const l = cleaned[i].toLowerCase();
+        if (headingPatterns.some(p => l.includes(p.toLowerCase()))) { startIdx = i; break; }
       }
     }
     if (startIdx === -1) return [];
     const result = [];
-    for (let i = startIdx + 1; i < nonEmpty.length; i++) {
-      const l = nonEmpty[i];
-      if (stopPatterns && stopPatterns.some(p => l.replace(/[^a-z0-9 ]/gi,'').trim().toLowerCase().startsWith(p.toLowerCase()))) break;
+    for (let i = startIdx + 1; i < cleaned.length; i++) {
+      const l = cleaned[i];
+      const lNorm = l.replace(/[^a-zA-Z0-9 ]/g,'').trim().toLowerCase();
+      if (SECTION_HEADS.test(l) || (stopPatterns && stopPatterns.some(p => lNorm.startsWith(p.toLowerCase())))) break;
       result.push(l);
     }
     return result;
   }
 
-  // ── Name ──
-  // Look for line immediately after "CURRICULUM VITAE" or "CV" heading, or first all-caps 2-word line
-  let candidateName = '';
-  const cvHeadingIdx = nonEmpty.findIndex(l => /^curriculum vitae$/i.test(l.trim()));
-  if (cvHeadingIdx !== -1 && nonEmpty[cvHeadingIdx + 1]) {
-    const candidate = nonEmpty[cvHeadingIdx + 1];
-    if (/^[A-Z][A-Z\s\-']+$/.test(candidate) && candidate.split(' ').length >= 2) {
-      candidateName = toTitleCase(candidate);
-    }
-  }
-  if (!candidateName) {
-    // Look for an ALL CAPS two-word+ line that isn't a section heading
-    const sectionHeadings = /^(profile|key skills|employment|experience|qualifications|education|references|about me|training|certificates)$/i;
-    for (const l of nonEmpty) {
-      if (/^[A-Z][A-Z\s\-']{3,}$/.test(l) && l.split(' ').length >= 2 && !sectionHeadings.test(l)) {
-        candidateName = toTitleCase(l);
-        break;
-      }
-    }
-  }
-  if (!candidateName) {
-    // Last resort: first line that looks like "Firstname Lastname"
-    for (const l of nonEmpty) {
-      const clean = l.replace(/curriculum vitae/i,'').trim();
-      if (clean.length > 3 && clean.length < 40 && /^[A-Za-z][a-zA-Z\s\-'.]+$/.test(clean) && clean.split(' ').length >= 2) {
-        candidateName = toTitleCase(clean); break;
-      }
-    }
-  }
-
   // ── Profile ──
-  // Join lines so that wrapped sentences are re-joined correctly
-  const profileLines = sectionContent(['profile','personal statement','summary'], ['key skills','skills','employment','experience','qualifications','education']);
-  // Re-join broken lines: if a line doesn't end with punctuation, join with next
-  let profileParagraphs = [];
-  let buf = '';
+  const profileLines = getSectionLines(
+    ['profile','professional summary','summary'],
+    ['key skills','core competencies','competencies','skills','employment','experience','qualifications','education']
+  );
+  let profileBuf = '', profileParas = [];
   for (const l of profileLines) {
-    if (!l) { if (buf) { profileParagraphs.push(buf.trim()); buf = ''; } continue; }
-    buf += (buf ? ' ' : '') + l;
-    if (/[.!?]$/.test(l)) { profileParagraphs.push(buf.trim()); buf = ''; }
+    if (!l) { if (profileBuf) { profileParas.push(profileBuf.trim()); profileBuf=''; } continue; }
+    profileBuf += (profileBuf ? ' ' : '') + l;
+    if (/[.!?]$/.test(l)) { profileParas.push(profileBuf.trim()); profileBuf=''; }
   }
-  if (buf) profileParagraphs.push(buf.trim());
-  // Remove personal details paragraph if anonymising
+  if (profileBuf) profileParas.push(profileBuf.trim());
   if (shouldStrip('personal')) {
-    profileParagraphs = profileParagraphs.filter(p => !/\b(married|spouse|partner|children|daughter|son|family|hobbies|interests|rugby|gym)\b/i.test(p));
+    profileParas = profileParas.filter(p => !/\b(married|spouse|children|daughter|son|family|hobbies|rugby|gym|interests)\b/i.test(p));
   }
-  // Strip any stray phone/email that crept into paragraphs
-  let profile = profileParagraphs.join('\n\n');
-  if (shouldStrip('phone')) profile = profile.replace(/\b(mobile|phone|tel):?\s*[\d\s\+\-\(\)]{7,}/gi, '').trim();
-  if (shouldStrip('email')) profile = profile.replace(/\b[\w._%+\-]+@[\w.\-]+\.[a-z]{2,}\b/gi, '').trim();
-  if (shouldStrip('address')) profile = profile.replace(/\b\d{1,3}\s+[A-Za-z]+\s+(street|road|lane|avenue|drive|close|way|acre|place)[^\n]*/gi, '').trim();
+  if (shouldStrip('phone')) profileParas = profileParas.map(p => p.replace(/\b(mobile|phone|tel):?\s*[\d\s+\-().]{7,}/gi,'').trim());
+  if (shouldStrip('email')) profileParas = profileParas.map(p => p.replace(/\b[\w._%+\-]+@[\w.\-]+\.[a-z]{2,}\b/gi,'').trim());
+  const profile = profileParas.join('\n\n');
 
   // ── Skills ──
-  const skillLines = sectionContent(['key skills','skills'], ['employment','experience','qualifications','education','profile','summary']);
+  const skillLines = getSectionLines(
+    ['key skills','core competencies','competencies','skills'],
+    ['employment','experience','qualifications','education','profile','summary','professional experience']
+  );
   const skills = skillLines
-    .map(l => l.replace(/^[•\-*\t]+\s*/,'').trim())
-    .filter(l => l.length > 1 && l.length < 70);
+    .map(l => l.replace(/^[•\-*\t]+\s*/,'').replace(/\|/g,'').trim())
+    .filter(l => l.length > 1 && l.length < 80 && !SECTION_HEADS.test(l));
 
-  // ── Employment ──
-  const expLines = sectionContent(
-    ['employment history','work history','career history','experience'],
-    ['qualifications','education','certificates','training','about me','references','interests']
+  // ── Experience ──
+  const expLines = getSectionLines(
+    ['employment history','professional experience','experience','work history','career history','employment'],
+    ['qualifications','education','certifications','key projects','about me','references','interests']
   );
   const roles = parseRoles(expLines, shouldStrip);
 
+  // ── Key Projects ──
+  const projLines = getSectionLines(['key projects','projects'], ['education','qualifications','certifications','references']);
+  const keyProjects = projLines
+    .join(' ')
+    .split(/•|\|/)
+    .map(p => p.trim())
+    .filter(p => p.length > 3);
+
   // ── Qualifications ──
-  const qualLines = sectionContent(
-    ['qualifications and certificates','qualifications','education','certificates','training'],
-    ['about me','references','personal','interests']
+  const qualLines = getSectionLines(
+    ['qualifications and certificates','education and certifications','education','qualifications','certificates','training'],
+    ['about me','references','personal','interests','key projects']
   );
   const quals = qualLines
     .map(l => l.replace(/^[•\-*\t]+\s*/,'').trim())
-    .filter(l => l.length > 3 && l.length < 200 && !/^(about me|references)/i.test(l));
+    .filter(l => l.length > 3 && l.length < 250 && !SECTION_HEADS.test(l));
 
-  return { candidateName, profile, skills, roles, quals };
+  return { candidateName, profile, skills, roles, keyProjects, quals };
 }
 
 function parseRoles(lines, shouldStrip) {
   const roles = [];
   let current = null;
-  const datePattern = /(\d{4}|january|february|march|april|may|june|july|august|september|october|november|december|jan|feb|mar|apr|jun|jul|aug|sep|oct|nov|dec)/i;
-  const reasonPattern = /^\(reason|^successfully exited|^\(note:/i;
+  const dateRx = /(jan(?:uary)?|feb(?:ruary)?|mar(?:ch)?|apr(?:il)?|may|jun(?:e)?|jul(?:y)?|aug(?:ust)?|sep(?:tember)?|oct(?:ober)?|nov(?:ember)?|dec(?:ember)?|\d{4})/i;
+  const reasonRx = /^\(reason|^successfully exited|^\(note:|^\(left/i;
+
+  // Role header patterns:
+  // "Job Title | Company   Date – Date"  (pipe separator, common in modern CVs)
+  // "Job Title, Company, Location: Date – Date"
+  // "Job Title  Company  Date"
+  function isRoleHeader(l) {
+    if (!l || l.startsWith('-') || l.startsWith('•')) return false;
+    return dateRx.test(l) && l.length < 200;
+  }
+
+  function parseHeader(l) {
+    // Format: "Lead Project Planner  |  Volker Wessels UK   Nov 2023 – Present"
+    // Format: "Construction Delivery Manager, EDF Energy Ltd: January 2025 - To date"
+    let title = '', org = '', dates = '';
+
+    // Extract date range from end of line
+    const dateEndRx = /([A-Za-z]*\s*\d{4}\s*[–\-]\s*(?:present|to date|[A-Za-z]*\s*\d{4}))\s*$/i;
+    const dateEndMatch = l.match(dateEndRx);
+    // Also match "Nov 2023 – Present" style
+    const dateMonthRx = /((?:jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)[a-z]*\s*\d{4}\s*[–\-]\s*(?:present|to date|(?:jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)[a-z]*\s*\d{4}|\d{4}))\s*$/i;
+    const dateMonthMatch = l.match(dateMonthRx);
+
+    const dateMatch = dateMonthMatch || dateEndMatch;
+    if (dateMatch) {
+      dates = dateMatch[1].trim().replace(/to date/i,'Present').replace(/–/g,'–');
+      l = l.slice(0, l.lastIndexOf(dateMatch[0])).trim();
+    }
+
+    // Split on pipe or comma
+    if (l.includes('|')) {
+      const parts = l.split('|').map(p => p.trim()).filter(Boolean);
+      title = parts[0];
+      org = parts[1] || '';
+    } else if (l.includes(',')) {
+      const commaIdx = l.indexOf(',');
+      title = l.slice(0, commaIdx).trim();
+      org = l.slice(commaIdx+1).trim().replace(/,?\s*\b(uk|ireland|somerset|cornwall|sydney|newcastle|bridgewater|taunton|london|manchester|birmingham|edinburgh|cardiff|united kingdom)\b.*/gi,'').trim();
+    } else {
+      title = l.trim();
+    }
+
+    // Clean up
+    title = title.replace(/[,:\-]+$/, '').trim();
+    org = org.replace(/[,:\-]+$/, '').trim();
+    dates = dates || '';
+
+    return { title, org, dates };
+  }
 
   for (let i = 0; i < lines.length; i++) {
-    let l = lines[i];
+    const l = lines[i];
     if (!l) continue;
-
-    // Skip reason-for-leaving lines
-    if (shouldStrip('personal') && reasonPattern.test(l)) continue;
+    if (shouldStrip('personal') && reasonRx.test(l)) continue;
 
     const isBullet = /^[•\-*]/.test(l);
-    const hasDate = datePattern.test(l);
 
-    if (hasDate && !isBullet) {
-      // This might be a role header split across 2 lines — check if next line has the date
-      let fullLine = l;
-      if (!/(\d{4}|to date|present)/i.test(l) && i+1 < lines.length && datePattern.test(lines[i+1])) {
-        fullLine = l + ' ' + lines[i+1];
-        i++;
-      }
+    if (isRoleHeader(l)) {
       if (current) roles.push(current);
-      current = { ...parseRoleHeader(fullLine), context: '', bullets: [] };
+      current = { ...parseHeader(l), context: '', bullets: [] };
     } else if (current) {
       if (isBullet) {
-        // Bullets may wrap — join continuation lines
         let bullet = l.replace(/^[•\-*]+\s*/,'').trim();
-        while (i+1 < lines.length && lines[i+1] && !/^[•\-*]/.test(lines[i+1]) && !datePattern.test(lines[i+1])) {
+        // Join wrapped bullet continuation lines
+        while (i+1 < lines.length && lines[i+1] && !/^[•\-*]/.test(lines[i+1]) && !isRoleHeader(lines[i+1])) {
           i++;
           bullet += ' ' + lines[i].trim();
         }
         if (bullet.length > 5) current.bullets.push(bullet);
-      } else if (l.length > 15) {
-        // Context line (project description etc.)
-        if (!current.context) current.context = l;
-        else if (!current.context.endsWith(l)) current.context += ' ' + l;
+      } else if (l.length > 10 && !current.context) {
+        current.context = l;
       }
     }
   }
@@ -797,41 +841,54 @@ function parseRoles(lines, shouldStrip) {
   return roles;
 }
 
-function parseRoleHeader(line) {
-  // Strip bold markers
-  line = line.replace(/\*+/g,'').trim();
-
-  // Extract dates — look for "Month YYYY - Month YYYY" or "YYYY - YYYY" or ": Month YYYY"
-  const dateRx = /[:\-–,]?\s*((?:jan(?:uary)?|feb(?:ruary)?|mar(?:ch)?|apr(?:il)?|may|jun(?:e)?|jul(?:y)?|aug(?:ust)?|sep(?:tember)?|oct(?:ober)?|nov(?:ember)?|dec(?:ember)?|\d{4})\s*[\-–]?\s*(?:to date|present|jan(?:uary)?|feb(?:ruary)?|mar(?:ch)?|apr(?:il)?|may|jun(?:e)?|jul(?:y)?|aug(?:ust)?|sep(?:tember)?|oct(?:ober)?|nov(?:ember)?|dec(?:ember)?)?\s*(?:\d{4})?)\s*\.?$/i;
-  const dateMatch = line.match(dateRx);
-  let dates = '';
-  let titlePart = line;
-  if (dateMatch) {
-    dates = dateMatch[1].trim().replace(/\s+/g,' ').replace(/to date/i,'Present');
-    dates = dates.replace(/\b(\w)/g, c => c.toUpperCase());
-    titlePart = line.slice(0, line.lastIndexOf(dateMatch[0])).trim().replace(/[:\-–,]+$/, '').trim();
-  }
-
-  // Split title from org — first comma separates them
-  const commaIdx = titlePart.indexOf(',');
-  let title = commaIdx > -1 ? titlePart.slice(0, commaIdx).trim() : titlePart.trim();
-  let orgRaw = commaIdx > -1 ? titlePart.slice(commaIdx + 1).trim() : '';
-
-  // Clean org: remove location suffixes (UK, Ireland, county names, city names)
-  const org = orgRaw
-    .replace(/,?\s*\b(uk|ireland|somerset|cornwall|sydney|newcastle|bridgewater|taunton|london|manchester|birmingham|edinburgh|cardiff)\b[^,]*/gi, '')
-    .replace(/,\s*$/, '')
-    .trim();
-
-  return { title, org, dates };
-}
-
 function toTitleCase(str) {
   return str.toLowerCase().replace(/\b\w/g, c => c.toUpperCase());
 }
 
-// ── RENDER CV ──
-function formatCV() {
+
+// ── PROGRESS BAR ──
+let _progInterval = null;
+
+function startProgress() {
+  const wrap = document.getElementById('prog-wrap');
+  const fill = document.getElementById('prog-fill');
+  const label = document.getElementById('prog-label');
+  wrap.style.display = 'block';
+  label.style.display = 'block';
+  fill.style.width = '0%';
+  fill.style.background = 'var(--green)';
+  let pct = 0;
+  let secs = 0;
+  label.textContent = 'Sending to AI...';
+  _progInterval = setInterval(() => {
+    secs++;
+    if (pct < 40) pct += 4;
+    else if (pct < 75) pct += 1.2;
+    else if (pct < 90) pct += 0.3;
+    fill.style.width = Math.min(pct, 90) + '%';
+    if (secs < 4) label.textContent = 'Sending to AI...';
+    else label.textContent = 'Formatting CV... ' + secs + 's';
+  }, 1000);
+}
+
+function stopProgress(success) {
+  clearInterval(_progInterval);
+  const wrap = document.getElementById('prog-wrap');
+  const fill = document.getElementById('prog-fill');
+  const label = document.getElementById('prog-label');
+  fill.style.width = '100%';
+  fill.style.background = success ? '#2d6a4f' : '#991b1b';
+  label.textContent = success ? 'Done!' : 'Failed';
+  setTimeout(() => {
+    wrap.style.display = 'none';
+    label.style.display = 'none';
+    fill.style.width = '0%';
+    fill.style.background = 'var(--green)';
+  }, 1500);
+}
+
+// ── FORMAT CV (AI-powered) ──
+async function formatCV() {
   const rawInput = activeTab === 'paste'
     ? document.getElementById('cv-text').value.trim()
     : uploadedText.trim();
@@ -841,9 +898,100 @@ function formatCV() {
     return;
   }
 
-  parsedCV = parseCV(rawInput);
-  renderCV(parsedCV);
-  showMsg('fmt-msg', 'CV formatted successfully.', 'ok');
+  // Pre-scrub contact details from raw text before sending
+  const anonOn = [...document.querySelectorAll('.anon-row.on .anon-text')].map(el => el.textContent.toLowerCase());
+  const shouldStrip = kw => anonOn.some(a => a.includes(kw));
+
+  let scrubbed = rawInput;
+  // Remove lines that are purely contact details
+  scrubbed = scrubbed.split('\n').filter(l => {
+    const t = l.trim();
+    if (!t) return true;
+    if (shouldStrip('phone') && /^[+\d][\d\s\-().]{6,}$/.test(t)) return false;
+    if (shouldStrip('email') && /^[\w._%+\-]+@[\w.\-]+\.[a-z]{2,}$/i.test(t)) return false;
+    if (shouldStrip('linkedin') && /linkedin\.com/i.test(t)) return false;
+    if ((shouldStrip('phone') || shouldStrip('email')) && /•/.test(t) && /[\d]{5,}/.test(t)) return false;
+    if (shouldStrip('address') && /^[A-Z]{1,2}\d[\d\w]?\s*\d[A-Z]{2}$/i.test(t)) return false;
+    return true;
+  }).join('\n');
+
+  // Cap at 14000 chars
+  scrubbed = scrubbed.slice(0, 14000);
+
+  const anonList = anonOn.map(a => a.trim()).join(', ');
+
+  const prompt = `You are a CV formatter for a nuclear and infrastructure recruitment agency. Parse the CV below and return ONLY a valid JSON object — no markdown, no commentary.
+
+Rules:
+- Keep ALL bullet points and role descriptions in full — do not summarise or shorten
+- REMOVE completely: ${anonList}
+- Keep the candidate's full name
+- Keep all employment history, qualifications, skills exactly as written
+
+JSON structure (use empty arrays [] for missing sections):
+{
+  "candidateName": "Full Name",
+  "professionalTitle": "Their main job title",
+  "profile": "Full profile/summary text verbatim",
+  "skills": ["skill1", "skill2"],
+  "roles": [
+    {
+      "title": "Job Title",
+      "org": "Organisation",
+      "dates": "Date – Date",
+      "context": "Optional project context line if present",
+      "bullets": ["Full bullet point text", "Another bullet"]
+    }
+  ],
+  "keyProjects": ["Project name 1", "Project name 2"],
+  "quals": ["Full qualification text 1", "Full qualification text 2"]
+}
+
+CV:
+---
+${scrubbed}
+---`;
+
+  document.getElementById('fmt-btn').disabled = true;
+  document.getElementById('fmt-btn').textContent = 'Formatting...';
+  document.getElementById('fmt-msg').className = 'msg';
+  startProgress();
+
+  try {
+    const res = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-20250514',
+        max_tokens: 3000,
+        messages: [{role: 'user', content: prompt}]
+      })
+    });
+
+    const data = await res.json();
+    if (data.error) throw new Error(data.error.message);
+
+    const raw = data.content.map(c => c.text || '').join('');
+    let cv;
+    try {
+      const cleaned = raw.replace(/```json|```/g, '').trim();
+      cv = JSON.parse(cleaned.slice(cleaned.indexOf('{'), cleaned.lastIndexOf('}') + 1));
+    } catch {
+      throw new Error('Could not parse response — please try again.');
+    }
+
+    parsedCV = cv;
+    stopProgress(true);
+    renderCV(cv);
+    showMsg('fmt-msg', 'CV formatted successfully.', 'ok');
+
+  } catch(e) {
+    stopProgress(false);
+    showMsg('fmt-msg', 'Error: ' + e.message, 'err');
+  } finally {
+    document.getElementById('fmt-btn').disabled = false;
+    document.getElementById('fmt-btn').textContent = 'Format & Anonymise CV';
+  }
 }
 
 function renderCV(cv) {
@@ -876,6 +1024,12 @@ function renderCV(cv) {
           </div>`).join('')}
       </div>` : '';
 
+  const projHTML = (cv.keyProjects && cv.keyProjects.length)
+    ? `<div class="cv-section">
+        <div class="cv-sec-hd"><span class="cv-sec-title">Key Projects</span><div class="cv-sec-line"></div></div>
+        <div class="cv-skills">${cv.keyProjects.map(p=>`<span class="cv-skill">${esc(p)}</span>`).join('')}</div>
+      </div>` : '';
+
   const qualHTML = cv.quals.length
     ? `<div class="cv-section">
         <div class="cv-sec-hd"><span class="cv-sec-title">Qualifications &amp; Certifications</span><div class="cv-sec-line"></div></div>
@@ -904,6 +1058,7 @@ function renderCV(cv) {
       ${profileHTML}
       ${skillsHTML}
       ${expHTML}
+      ${projHTML}
       ${qualHTML}
     </div>
 
