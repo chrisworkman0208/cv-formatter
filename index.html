@@ -5,7 +5,29 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>ME Global Resources — CV Formatter</title>
 <link href="https://fonts.googleapis.com/css2?family=Crimson+Pro:wght@400;600;700&family=Jost:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-<script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.6.0/mammoth.browser.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.6.0/mammoth.browser.min.js">
+// ── PASSWORD GATE ──
+// Change 'mactech2025' below to whatever password you want your team to use
+const TEAM_PASSWORD = 'Mactech2026';
+
+function checkPassword() {
+  const val = document.getElementById('pw-input').value;
+  if (val === TEAM_PASSWORD) {
+    document.getElementById('pw-gate').style.display = 'none';
+    sessionStorage.setItem('cv_auth', '1');
+  } else {
+    document.getElementById('pw-error').textContent = 'Incorrect password — please try again.';
+    document.getElementById('pw-input').value = '';
+    document.getElementById('pw-input').focus();
+  }
+}
+
+// Auto-dismiss if already authenticated in this session
+if (sessionStorage.getItem('cv_auth') === '1') {
+  document.getElementById('pw-gate').style.display = 'none';
+}
+
+</script>
 <style>
 * { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -437,6 +459,18 @@ textarea::placeholder { color: rgba(255,255,255,0.2); }
 </head>
 <body>
 
+
+<div class="pw-gate" id="pw-gate">
+  <div class="pw-box">
+    <div class="pw-logo">ME<br>Global<br>Resources</div>
+    <div class="pw-title">CV Formatter</div>
+    <div class="pw-sub">Enter your team password to continue</div>
+    <input type="password" class="pw-input" id="pw-input" placeholder="Password" onkeydown="if(event.key==='Enter')checkPassword()">
+    <button class="pw-btn" onclick="checkPassword()">Enter</button>
+    <div class="pw-error" id="pw-error"></div>
+  </div>
+</div>
+
 <header class="app-bar">
   <img src="data:image/jpeg;base64,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" alt="ME Global Resources" style="height:34px;width:auto;object-fit:contain;">
   <div class="app-bar-divider"></div>
@@ -593,7 +627,7 @@ dz.addEventListener('dragover', e => { e.preventDefault(); dz.classList.add('ove
 dz.addEventListener('dragleave', () => dz.classList.remove('over'));
 dz.addEventListener('drop', e => { e.preventDefault(); dz.classList.remove('over'); if(e.dataTransfer.files[0]) handleFile(e.dataTransfer.files[0]); });
 
-async function handleFile(f) {
+ function handleFile(f) {
   const note = document.getElementById('file-note');
   note.textContent = '⏳ Reading ' + f.name + '...';
   uploadedText = '';
